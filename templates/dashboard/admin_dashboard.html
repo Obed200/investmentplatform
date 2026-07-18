@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Admin Center | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">Administration</p>
+    <h1>Admin Dashboard</h1>
+</section>
+<section class="stats-grid">
+    <article><span>Total Users</span><strong>{{ total_users }}</strong></article>
+    <article><span>Total Deposits</span><strong>{{ total_deposits|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Total Withdrawals</span><strong>{{ total_withdrawals|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Total Investments</span><strong>{{ total_investments }}</strong></article>
+    <article><span>Today's Earnings</span><strong>{{ todays_earnings|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Pending Deposits</span><strong>{{ pending_deposits }}</strong></article>
+    <article><span>Pending Withdrawals</span><strong>{{ pending_withdrawals }}</strong></article>
+    <article><span>Referral Bonuses</span><strong>{{ referral_bonuses|floatformat:0|intcomma }} RWF</strong></article>
+</section>
+<section class="quick-actions">
+    <a class="btn primary" href="{% url 'admin:payments_deposit_changelist' %}">Review Deposits</a>
+    <a class="btn dark" href="{% url 'admin:payments_withdrawal_changelist' %}">Review Withdrawals</a>
+    <a class="btn ghost" href="{% url 'admin:core_sitesettings_changelist' %}">Community Links</a>
+    <a class="btn ghost" href="{% url 'admin:investments_investmentplan_changelist' %}">Manage Plans</a>
+</section>
+<div class="dashboard-grid">
+    <article class="panel">
+        <h2>Recent Users</h2>
+        <ul class="list">
+            {% for profile in recent_users %}
+                <li><span>{{ profile.full_name }}</span><small>{{ profile.phone_number }}</small></li>
+            {% endfor %}
+        </ul>
+    </article>
+    <article class="panel">
+        <h2>Recent Transactions</h2>
+        <ul class="list">
+            {% for transaction in recent_transactions %}
+                <li><span>{{ transaction.user.username }} {{ transaction.get_transaction_type_display }}</span><strong>{{ transaction.amount|floatformat:0|intcomma }}</strong></li>
+            {% endfor %}
+        </ul>
+    </article>
+</div>
+{% endblock %}

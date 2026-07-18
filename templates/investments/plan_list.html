@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Investment Library | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">Investment products</p>
+    <h1>Investment Library</h1>
+</section>
+<div class="plan-grid">
+    {% for plan in plans %}
+        <article class="plan-card">
+            <h2>{{ plan.name }}</h2>
+            <dl>
+                <div><dt>Amount</dt><dd>{{ plan.amount|floatformat:0|intcomma }} RWF</dd></div>
+                <div><dt>Daily Income</dt><dd>{{ plan.daily_income|floatformat:0|intcomma }} RWF</dd></div>
+                <div><dt>Duration</dt><dd>{{ plan.duration_days }} days</dd></div>
+                <div><dt>Total Revenue</dt><dd>{{ plan.total_revenue|floatformat:0|intcomma }} RWF</dd></div>
+            </dl>
+            <a class="btn primary full" href="{% url 'payments:deposit_create' %}">Invest</a>
+        </article>
+    {% empty %}
+        <p>No investment products are active yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

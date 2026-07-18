@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}RIBURAL INVESTMENTS{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">A continuous investment platform</p>
+        <h1>RIBURAL INVESTMENTS</h1>
+        <p class="hero-line">Grow Consistently. Earn Daily. Build Your Future.</p>
+        <div class="hero-actions">
+            <a class="btn primary" href="{% url 'accounts:register' %}">Start Investing</a>
+            <a class="btn ghost" href="{% url 'investments:plan_list' %}">View Library</a>
+            {% if site_settings.whatsapp_community_link or site_settings.telegram_community_link %}
+                <a class="btn dark" href="{% if site_settings.whatsapp_community_link %}{{ site_settings.whatsapp_community_link }}{% else %}{{ site_settings.telegram_community_link }}{% endif %}">Join Community</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="hero-panel">
+        <span class="book-icon">IB</span>
+        <strong>Your investment library for financial freedom</strong>
+    </div>
+</section>
+
+<section class="feature-strip">
+    <article><span>UP</span><h3>Daily Income</h3><p>Earn every day on your investment.</p></article>
+    <article><span>OK</span><h3>Safe & Secure</h3><p>Every operation is reviewed by administrators.</p></article>
+    <article><span>RE</span><h3>Continuous Growth</h3><p>Reinvest and keep building steadily.</p></article>
+    <article><span>TR</span><h3>Trust & Transparency</h3><p>Clear products with no hidden charges.</p></article>
+</section>
+
+<section class="section-head">
+    <p class="eyebrow">Investment products</p>
+    <h2>Our Investment Library</h2>
+</section>
+
+<section class="plan-grid">
+    {% for plan in plans %}
+        <article class="plan-card">
+            <h3>{{ plan.name }}</h3>
+            <div class="detail-list">
+                <div><span>Amount</span><strong>{{ plan.amount|floatformat:0|intcomma }} RWF</strong></div>
+                <div><span>Daily</span><strong>{{ plan.daily_income|floatformat:0|intcomma }} RWF</strong></div>
+                <div><span>Days</span><strong>{{ plan.duration_days }}</strong></div>
+                <div><span>Revenue</span><strong>{{ plan.total_revenue|floatformat:0|intcomma }} RWF</strong></div>
+            </div>
+            <div style="margin-top:14px; display:flex; gap:8px;">
+                <a class="btn primary" href="{% url 'payments:deposit_create' %}">Invest Now</a>
+                <a class="btn ghost" href="#">Details</a>
+            </div>
+        </article>
+    {% empty %}
+        <article class="panel">Investment products will appear here soon.</article>
+    {% endfor %}
+</section>
+
+<section style="margin-top:18px;">
+    <div class="panel" style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
+        <div>
+            <h3 style="margin:0 0 6px;">Earn 10% Referral Bonus</h3>
+            <p style="margin:0;">Share your referral code and earn a commission when your friends invest.</p>
+        </div>
+        <div>
+            <a class="btn primary" href="{% url 'accounts:register' %}">Get Started</a>
+        </div>
+    </div>
+</section>
+
+<section class="content-grid">
+    {% for announcement in announcements %}
+        <article>
+            <h2>{{ announcement.title }}</h2>
+            <p>{{ announcement.message }}</p>
+        </article>
+    {% endfor %}
+    <article>
+        <h2>How It Works</h2>
+        <p>Choose a product, pay using MTN MoMo code, upload your screenshot, and wait for admin approval. Once approved, your investment starts earning daily income.</p>
+    </article>
+    <article>
+        <h2>Referral Program</h2>
+        <p>Invite friends with your referral code and receive 10% after their first approved investment.</p>
+    </article>
+    <article>
+        <h2>Join the Community</h2>
+        <div class="community-actions">
+            {% if site_settings.whatsapp_community_link %}<a class="btn primary" href="{{ site_settings.whatsapp_community_link }}">WhatsApp</a>{% endif %}
+            {% if site_settings.telegram_community_link %}<a class="btn dark" href="{{ site_settings.telegram_community_link }}">Telegram</a>{% endif %}
+            {% if not site_settings.whatsapp_community_link and not site_settings.telegram_community_link %}<p>Community links will be added soon.</p>{% endif %}
+        </div>
+    </article>
+</section>
+{% endblock %}

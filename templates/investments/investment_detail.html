@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Investment Detail | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">{{ investment.get_status_display }}</p>
+    <h1>{{ investment.plan.name }}</h1>
+</section>
+<article class="panel">
+    <dl class="detail-list">
+        <div><dt>Amount</dt><dd>{{ investment.amount|floatformat:0|intcomma }} RWF</dd></div>
+        <div><dt>Daily Income</dt><dd>{{ investment.daily_income|floatformat:0|intcomma }} RWF</dd></div>
+        <div><dt>Total Earned</dt><dd>{{ investment.total_earned|floatformat:0|intcomma }} RWF</dd></div>
+        <div><dt>Start Date</dt><dd>{{ investment.start_date }}</dd></div>
+        <div><dt>End Date</dt><dd>{{ investment.end_date }}</dd></div>
+        <div><dt>Days Remaining</dt><dd>{{ investment.days_remaining }}</dd></div>
+    </dl>
+</article>
+{% endblock %}

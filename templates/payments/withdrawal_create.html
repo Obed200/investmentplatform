@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Withdraw | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">Withdrawable balance</p>
+    <h1>{{ user.wallet.withdrawable_balance|floatformat:0|intcomma }} RWF</h1>
+</section>
+<form method="post" class="form-card narrow">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn primary full" type="submit">Request Withdrawal</button>
+</form>
+{% endblock %}

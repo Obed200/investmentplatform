@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Account Center | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">Account center</p>
+    <h1>{{ user.profile.full_name }}</h1>
+</section>
+<div class="dashboard-grid">
+    <article class="panel">
+        <h2>Profile</h2>
+        <form method="post" class="stack-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn primary" type="submit">Save Profile</button>
+        </form>
+    </article>
+    <article class="panel">
+        <h2>Referral</h2>
+        <p class="metric-big">{{ user.profile.referral_code }}</p>
+        <p>Share this code with friends. You earn 10% after their first approved investment.</p>
+        {% url 'accounts:register' as reg_url %}
+        {% with full_link=request.scheme|add:"://"|add:request.get_host|add:reg_url|add:"?ref="|add:user.profile.referral_code %}
+            <p style="margin-top:8px;">Your referral link:</p>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input id="referralLink" readonly style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--line);" value="{{ full_link }}">
+                <button class="btn" id="copyReferral">Copy</button>
+                <button class="btn primary" id="shareReferral">Share</button>
+                <a id="waShare" class="btn" href="" target="_blank">WhatsApp</a>
+            </div>
+        {% endwith %}
+        <p><strong>Registered:</strong> {{ user.profile.created_at|date:"M d, Y" }}</p>
+        <p><strong>Wallet:</strong> {{ user.wallet.current_balance|floatformat:0|intcomma }} RWF</p>
+    </article>
+    <article class="panel">
+        <h2>Community</h2>
+        <div class="community-actions">
+            {% if site_settings.whatsapp_community_link %}<a class="btn primary" href="{{ site_settings.whatsapp_community_link }}">Join WhatsApp</a>{% endif %}
+            {% if site_settings.telegram_community_link %}<a class="btn dark" href="{{ site_settings.telegram_community_link }}">Join Telegram</a>{% endif %}
+            {% if not site_settings.whatsapp_community_link and not site_settings.telegram_community_link %}<p>Community links will appear here after admin adds them.</p>{% endif %}
+        </div>
+    </article>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Referrals | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">Invite friends</p>
+    <h1>{{ user.profile.referral_code }}</h1>
+    <p>Share your referral code. You receive 10% after a referred user's first approved investment.</p>
+</section>
+<article class="panel">
+    <h2>Your Referrals</h2>
+    <ul class="list">
+        {% for referral in referrals %}
+            <li><span>{{ referral.full_name }}</span><small>{{ referral.created_at|date:"M d, Y" }}</small></li>
+        {% empty %}
+            <li>No referrals yet.</li>
+        {% endfor %}
+    </ul>
+</article>
+{% endblock %}

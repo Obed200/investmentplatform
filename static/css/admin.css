@@ -1,0 +1,99 @@
+:root {
+    --primary: #f45a00;
+    --secondary: #111111;
+    --accent: #d84600;
+    --primary-fg: #ffffff;
+    --body-fg: #1f2933;
+    --body-bg: #f6f7f9;
+    --body-quiet-color: #667085;
+    --hairline-color: #e7e7e7;
+    --border-color: #e7e7e7;
+    --link-fg: #d84600;
+    --link-hover-color: #111111;
+    --button-bg: #f45a00;
+    --button-hover-bg: #d84600;
+    --default-button-bg: #111111;
+    --default-button-hover-bg: #2b2b2b;
+}
+
+body {
+    background: #f6f7f9;
+}
+
+#header {
+    background: #111111;
+    color: #ffffff;
+    box-shadow: 0 10px 30px rgba(17, 17, 17, 0.12);
+}
+
+#branding h1,
+#branding h1 a:link,
+#branding h1 a:visited {
+    color: #ffffff;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+#branding h1::first-letter {
+    color: #f45a00;
+}
+
+div.breadcrumbs {
+    background: #f45a00;
+    color: #ffffff;
+}
+
+div.breadcrumbs a {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.module {
+    border: 1px solid #e7e7e7;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(17, 17, 17, 0.06);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+    background: #f45a00;
+    color: #ffffff;
+    font-weight: 900;
+}
+
+a:link,
+a:visited {
+    color: #d84600;
+}
+
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+a.button {
+    border-radius: 8px;
+    background: #f45a00;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.button:hover,
+input[type=submit]:hover,
+input[type=button]:hover,
+.submit-row input:hover,
+a.button:hover {
+    background: #d84600;
+}
+
+.button.default,
+input[type=submit].default,
+.submit-row input.default {
+    background: #111111;
+}
+
+#content h1 {
+    color: #111111;
+    font-weight: 900;
+}

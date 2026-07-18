@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">Account updates</p>
+    <h1>Notifications</h1>
+</section>
+<article class="panel">
+    <ul class="list">
+        {% for notification in notifications %}
+            <li>
+                <span><strong>{{ notification.title }}</strong><br>{{ notification.message }}</span>
+                <small>{{ notification.created_at|date:"M d, Y H:i" }}</small>
+            </li>
+        {% empty %}
+            <li>No notifications yet.</li>
+        {% endfor %}
+    </ul>
+</article>
+{% endblock %}

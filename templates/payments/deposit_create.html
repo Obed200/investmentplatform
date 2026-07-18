@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Deposit | Ribural{% endblock %}
+
+{% block content %}
+<section class="section-head">
+    <p class="eyebrow">MTN payment</p>
+    <h1>Start Investment</h1>
+</section>
+<div class="dashboard-grid">
+    <article class="panel payment-instructions">
+        <h2>Pay First</h2>
+        <p>Send money to MTN MoMo pay code:</p>
+        <p class="payment-code">{{ payment_code }}</p>
+        <a class="btn primary full" href="tel:*182*8*1*{{ payment_code }}%23">Dial *182*8*1*{{ payment_code }}#</a>
+        <p class="muted">After payment, take a screenshot and upload it here for admin confirmation.</p>
+    </article>
+    <article class="panel">
+        <h2>Upload Screenshot</h2>
+        {% if active_or_pending %}
+            <p>You already have an active or pending investment. Please wait for completion or admin review.</p>
+        {% else %}
+            <form method="post" enctype="multipart/form-data" class="stack-form">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn primary" type="submit">Submit Proof</button>
+            </form>
+        {% endif %}
+    </article>
+</div>
+{% endblock %}
