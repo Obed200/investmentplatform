@@ -60,4 +60,14 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ["full_name", "phone_number"]
-    
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data["phone_number"].strip()
+        taken = (
+            User.objects.filter(username=phone_number).exclude(pk=self.instance.user_id).exists()
+            or Profile.objects.filter(phone_number=phone_number).exclude(pk=self.instance.pk).exists()
+        )
+        if taken:
+            raise forms.ValidationError("An account with this phone number already exists.")
+        return phone_number
+
