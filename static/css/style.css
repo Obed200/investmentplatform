@@ -588,31 +588,80 @@ input:focus, select:focus, textarea:focus {
 .plan-summary .plan-price { font-size: 30px; font-weight: 900; color: var(--orange-dark); margin: 8px 0; }
 .plan-summary .detail-list { margin-top: 12px; }
 
-/* ------------------------------ Management pages ------------------------------ */
-.manage-nav {
+/* ------------------------------ Admin sidebar shell ------------------------------ */
+.admin-shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+.admin-sidebar {
+    position: sticky;
+    top: 86px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px;
-    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
     background: var(--white);
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
-    overflow-x: auto;
 }
-.manage-nav a {
-    padding: 9px 16px;
+.sidebar-label {
+    margin: 12px 12px 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+.sidebar-label:first-child { margin-top: 2px; }
+.admin-sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
     border-radius: 10px;
     text-decoration: none;
     font-weight: 700;
     font-size: 14px;
     color: var(--night);
-    white-space: nowrap;
     transition: background .15s, color .15s;
 }
-.manage-nav a:hover { background: var(--brand-grad-soft); color: var(--orange-dark); }
-.manage-nav a.active { background: var(--brand-grad); color: var(--white); box-shadow: 0 6px 16px rgba(255,106,19,.3); }
+.admin-sidebar a .ico { width: 20px; text-align: center; font-size: 15px; opacity: .8; }
+.admin-sidebar a:hover { background: var(--brand-grad-soft); color: var(--orange-dark); }
+.admin-sidebar a.active { background: var(--brand-grad); color: var(--white); box-shadow: 0 8px 18px rgba(255,106,19,.28); }
+.admin-sidebar a.active .ico { opacity: 1; }
+.side-badge {
+    margin-left: auto;
+    min-width: 22px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 900;
+    color: #92600a;
+    background: rgba(255, 183, 3, .28);
+}
+.admin-sidebar a.active .side-badge { color: var(--white); background: rgba(255,255,255,.28); }
+.admin-content { min-width: 0; }
+
+@media (max-width: 900px) {
+    .admin-shell { grid-template-columns: 1fr; gap: 16px; }
+    .admin-sidebar {
+        position: static;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 6px;
+        padding: 8px;
+    }
+    .admin-sidebar .sidebar-label { display: none; }
+    .admin-sidebar a { white-space: nowrap; padding: 9px 14px; }
+    .admin-sidebar a .ico { display: none; }
+}
+
+/* ------------------------------ Management pages ------------------------------ */
 
 .manage-head {
     display: flex;

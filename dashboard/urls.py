@@ -14,6 +14,12 @@ urlpatterns = [
     path('admin/withdrawal/<int:pk>/approve/', views.approve_withdrawal, name='approve_withdrawal'),
     path('admin/withdrawal/<int:pk>/reject/', views.reject_withdrawal, name='reject_withdrawal'),
 
+    # Users
+    path('admin/users/', views.manage_users, name='manage_users'),
+    path('admin/users/<int:pk>/', views.user_detail, name='user_detail'),
+    path('admin/users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
+    path('admin/users/<int:pk>/toggle-staff/', views.user_toggle_staff, name='user_toggle_staff'),
+
     # Investment plans
     path('admin/plans/', views.manage_plans, name='manage_plans'),
     path('admin/plans/new/', views.plan_create, name='plan_create'),

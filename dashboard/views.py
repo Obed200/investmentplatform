@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -59,6 +60,7 @@ def admin_dashboard(request):
         "pending_withdrawal_list": Withdrawal.objects.filter(status=Withdrawal.PENDING).select_related("user", "user__profile"),
         "recent_users": Profile.objects.select_related("user").order_by("-created_at")[:8],
         "recent_transactions": Transaction.objects.select_related("user")[:10],
+        "section": "overview",
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
 
@@ -122,6 +124,77 @@ def reject_withdrawal(request, pk):
 # ==========================================================================
 # Management pages (in-dashboard CRUD, replacing the Django admin screens)
 # ==========================================================================
+
+# -------- Users --------
+@staff_member_required
+def manage_users(request):
+    users = User.objects.select_related("profile", "wallet").order_by("-date_joined")
+    q = request.GET.get("q", "").strip()
+    role = request.GET.get("role", "")
+    if q:
+        users = users.filter(
+            Q(username__icontains=q)
+            | Q(profile__full_name__icontains=q)
+            | Q(profile__phone_number__icontains=q)
+            | Q(profile__referral_code__icontains=q)
+        )
+    if role == "admin":
+        users = users.filter(is_staff=True)
+    elif role == "suspended":
+        users = users.filter(is_active=False)
+    page = Paginator(users, 25).get_page(request.GET.get("page"))
+    return render(request, "dashboard/manage/users.html", {
+        "page_obj": page, "section": "users", "q": q, "role": role,
+    })
+
+
+@staff_member_required
+def user_detail(request, pk):
+    account = get_object_or_404(User.objects.select_related("profile", "wallet"), pk=pk)
+    return render(request, "dashboard/manage/user_detail.html", {
+        "account": account, "section": "users",
+        "investments": account.investments.select_related("plan")[:20],
+        "transactions": account.transactions.all()[:20],
+        "referrals": Profile.objects.filter(referred_by=account).select_related("user"),
+    })
+
+
+def _guard_user_action(request, account):
+    """Return an error message if the acting admin may not modify this account."""
+    if account == request.user:
+        return "You cannot change your own account here."
+    if account.is_superuser:
+        return "Superuser accounts cannot be changed from this page."
+    return None
+
+
+@staff_member_required
+@require_POST
+def user_toggle_active(request, pk):
+    account = get_object_or_404(User, pk=pk)
+    error = _guard_user_action(request, account)
+    if error:
+        messages.error(request, error)
+    else:
+        account.is_active = not account.is_active
+        account.save(update_fields=["is_active"])
+        messages.success(request, f"{account.username} is now {'active' if account.is_active else 'suspended'}.")
+    return redirect(request.META.get("HTTP_REFERER") or "dashboard:manage_users")
+
+
+@staff_member_required
+@require_POST
+def user_toggle_staff(request, pk):
+    account = get_object_or_404(User, pk=pk)
+    error = _guard_user_action(request, account)
+    if error:
+        messages.error(request, error)
+    else:
+        account.is_staff = not account.is_staff
+        account.save(update_fields=["is_staff"])
+        messages.success(request, f"{account.username} is now {'an admin' if account.is_staff else 'a regular user'}.")
+    return redirect(request.META.get("HTTP_REFERER") or "dashboard:manage_users")
+
 
 # -------- Investment plans --------
 @staff_member_required
