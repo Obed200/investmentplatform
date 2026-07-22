@@ -133,7 +133,19 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Django 6 removed STATICFILES_STORAGE; configure WhiteNoise via STORAGES so
+# collected static files are actually served in production (e.g. PythonAnywhere,
+# where runserver does not serve them). CompressedStaticFilesStorage avoids the
+# manifest requirement so pages still render before collectstatic is run.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
