@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from core.models import SiteSettings
 
@@ -37,6 +38,12 @@ def register(request):
 class RiburalLoginView(LoginView):
     template_name = "accounts/login.html"
     authentication_form = PhoneLoginForm
+
+    def get_default_redirect_url(self):
+        # Staff go straight to the Admin Center; a ?next= still takes priority.
+        if self.request.user.is_staff:
+            return reverse("dashboard:admin_dashboard")
+        return super().get_default_redirect_url()
 
 
 login_view = RiburalLoginView.as_view()
