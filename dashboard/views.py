@@ -14,7 +14,7 @@ from investments.models import Investment, InvestmentPlan
 from payments.models import Deposit, Withdrawal
 from transactions.models import Transaction
 
-from .forms import AnnouncementForm, InvestmentPlanForm, SiteSettingsForm
+from .forms import AnnouncementForm, InvestmentForm, InvestmentPlanForm, SiteSettingsForm
 
 
 @login_required
@@ -60,6 +60,7 @@ def admin_dashboard(request):
         "pending_withdrawal_list": Withdrawal.objects.filter(status=Withdrawal.PENDING).select_related("user", "user__profile"),
         "recent_users": Profile.objects.select_related("user").order_by("-created_at")[:8],
         "recent_transactions": Transaction.objects.select_related("user")[:10],
+        "active_plans": InvestmentPlan.objects.filter(is_active=True),
         "section": "overview",
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
@@ -71,15 +72,29 @@ def approve_deposit(request, pk):
     deposit = get_object_or_404(Deposit, pk=pk)
     if deposit.status != Deposit.PENDING:
         messages.warning(request, "That deposit was already reviewed.")
+        return redirect("dashboard:admin_dashboard")
+
+    # Plan correction: the user may have selected one plan but paid for a
+    # cheaper/different one. The admin can switch the plan here instead of
+    # rejecting, so the activated investment matches what was actually paid.
+    plan_id = request.POST.get("plan")
+    if plan_id and str(deposit.plan_id) != str(plan_id):
+        new_plan = InvestmentPlan.objects.filter(pk=plan_id, is_active=True).first()
+        if new_plan:
+            old_name = deposit.plan.name
+            deposit.plan = new_plan
+            deposit.amount = new_plan.amount
+            deposit.save(update_fields=["plan", "amount"])
+            messages.info(request, f"Plan changed from {old_name} to {new_plan.name} before approval.")
+
+    deposit.approve()
+    if deposit.status == Deposit.APPROVED:
+        messages.success(
+            request,
+            f"Approved {deposit.user.username}'s payment. Investment in {deposit.plan.name} is now active.",
+        )
     else:
-        deposit.approve()
-        if deposit.status == Deposit.APPROVED:
-            messages.success(
-                request,
-                f"Approved {deposit.user.username}'s payment. Investment in {deposit.plan.name} is now active.",
-            )
-        else:
-            messages.warning(request, f"Could not approve: {deposit.admin_note}")
+        messages.warning(request, f"Could not approve: {deposit.admin_note}")
     return redirect("dashboard:admin_dashboard")
 
 
@@ -269,6 +284,22 @@ def manage_investments(request):
     return render(request, "dashboard/manage/investments.html", {
         "page_obj": page, "section": "investments",
         "status": status, "q": q, "status_choices": Investment.STATUS_CHOICES,
+    })
+
+
+@staff_member_required
+def investment_edit(request, pk):
+    investment = get_object_or_404(Investment.objects.select_related("user", "plan"), pk=pk)
+    form = InvestmentForm(request.POST or None, instance=investment)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Investment for {investment.user.username} updated. The user's dashboard now reflects the change.")
+        return redirect("dashboard:manage_investments")
+    who = investment.user.profile.full_name or investment.user.username
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "investments",
+        "title": f"Edit investment — {who}",
+        "back_url": "dashboard:manage_investments",
     })
 
 

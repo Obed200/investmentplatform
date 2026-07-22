@@ -29,6 +29,7 @@ urlpatterns = [
 
     # Investments
     path('admin/investments/', views.manage_investments, name='manage_investments'),
+    path('admin/investments/<int:pk>/edit/', views.investment_edit, name='investment_edit'),
     path('admin/investments/<int:pk>/credit/', views.investment_credit, name='investment_credit'),
     path('admin/investments/<int:pk>/cancel/', views.investment_cancel, name='investment_cancel'),
 

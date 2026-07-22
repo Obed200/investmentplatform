@@ -574,7 +574,10 @@ input:focus, select:focus, textarea:focus {
 .approval-thumb.placeholder { display: grid; place-items: center; color: var(--muted); font-size: 12px; text-align: center; }
 .approval-meta strong { display: block; color: var(--night); font-size: 15px; }
 .approval-meta span { color: var(--muted); font-size: 13px; }
-.approval-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.approval-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.approve-form { display: flex; flex-direction: column; gap: 6px; }
+.approve-plan { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.approve-plan select { min-height: 40px; min-width: 220px; }
 
 /* ------------------------------ Chosen plan summary ------------------------------ */
 .plan-summary {
