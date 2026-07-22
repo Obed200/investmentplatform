@@ -3,6 +3,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,7 +15,7 @@ from investments.models import Investment, InvestmentPlan
 from payments.models import Deposit, Withdrawal
 from transactions.models import Transaction
 
-from .forms import AnnouncementForm, InvestmentForm, InvestmentPlanForm, SiteSettingsForm
+from .forms import AnnouncementForm, InvestmentForm, InvestmentPlanForm, SiteSettingsForm, UserAdminForm
 
 
 @login_required
@@ -171,6 +172,51 @@ def user_detail(request, pk):
         "investments": account.investments.select_related("plan")[:20],
         "transactions": account.transactions.all()[:20],
         "referrals": Profile.objects.filter(referred_by=account).select_related("user"),
+    })
+
+
+@staff_member_required
+def user_edit(request, pk):
+    account = get_object_or_404(User.objects.select_related("profile", "wallet"), pk=pk)
+    wallet = account.wallet
+    initial = {
+        "full_name": account.profile.full_name,
+        "phone_number": account.profile.phone_number,
+        "email": account.email,
+        "current_balance": wallet.current_balance,
+        "withdrawable_balance": wallet.withdrawable_balance,
+        "referral_bonus": wallet.referral_bonus,
+        "daily_earnings": wallet.daily_earnings,
+    }
+    form = UserAdminForm(request.POST or None, account=account, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        cd = form.cleaned_data
+        try:
+            with transaction.atomic():
+                profile = account.profile
+                profile.full_name = cd["full_name"]
+                profile.phone_number = cd["phone_number"]
+                profile.save(update_fields=["full_name", "phone_number"])
+                account.username = cd["phone_number"]
+                account.first_name = cd["full_name"]
+                account.email = cd["email"]
+                account.save(update_fields=["username", "first_name", "email"])
+                wallet.current_balance = cd["current_balance"]
+                wallet.withdrawable_balance = cd["withdrawable_balance"]
+                wallet.referral_bonus = cd["referral_bonus"]
+                wallet.daily_earnings = cd["daily_earnings"]
+                wallet.save(update_fields=[
+                    "current_balance", "withdrawable_balance", "referral_bonus", "daily_earnings",
+                ])
+        except IntegrityError:
+            form.add_error("phone_number", "Another account already uses this phone number.")
+        else:
+            messages.success(request, f"{account.username}'s account was updated.")
+            return redirect("dashboard:user_detail", pk=account.pk)
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "users",
+        "title": f"Edit {account.profile.full_name or account.username}",
+        "back_url": "dashboard:manage_users",
     })
 
 

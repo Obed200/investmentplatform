@@ -9,7 +9,10 @@
         <p class="eyebrow">Account</p>
         <h1>{{ account.profile.full_name|default:account.username }}</h1>
     </div>
-    <a class="btn ghost" href="{% url 'dashboard:manage_users' %}">← All users</a>
+    <div class="row-actions">
+        <a class="btn primary" href="{% url 'dashboard:user_edit' account.id %}">Edit account</a>
+        <a class="btn ghost" href="{% url 'dashboard:manage_users' %}">← All users</a>
+    </div>
 </div>
 
 <section class="stats-grid">
