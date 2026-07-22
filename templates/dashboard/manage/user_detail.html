@@ -6,7 +6,7 @@
 {% block admin_content %}
 <div class="manage-head">
     <div>
-        <p class="eyebrow">Account</p>
+        <p class="eyebrow">Account monitor</p>
         <h1>{{ account.profile.full_name|default:account.username }}</h1>
     </div>
     <div class="row-actions">
@@ -15,11 +15,16 @@
     </div>
 </div>
 
+<!-- ===================== Money snapshot ===================== -->
 <section class="stats-grid">
-    <article><span>Current Balance</span><strong>{% if account.wallet %}{{ account.wallet.current_balance|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
-    <article><span>Withdrawable</span><strong>{% if account.wallet %}{{ account.wallet.withdrawable_balance|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
-    <article><span>Daily Earnings</span><strong>{% if account.wallet %}{{ account.wallet.daily_earnings|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
-    <article><span>Referral Bonus</span><strong>{% if account.wallet %}{{ account.wallet.referral_bonus|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
+    <article><span>Current Balance</span><strong>{{ account.wallet.current_balance|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Withdrawable</span><strong>{{ account.wallet.withdrawable_balance|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Total Earned</span><strong>{{ total_earned|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Today's Earnings</span><strong>{{ todays_earnings|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Referral Bonus</span><strong>{{ account.wallet.referral_bonus|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Total Deposited</span><strong>{{ total_deposited|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Total Withdrawn</span><strong>{{ total_withdrawn|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Referrals</span><strong>{{ referrals|length }}</strong></article>
 </section>
 
 <div class="dashboard-grid">
@@ -27,6 +32,7 @@
         <h2>Profile</h2>
         <dl class="detail-list">
             <div><dt>Phone / login</dt><dd>{{ account.profile.phone_number|default:account.username }}</dd></div>
+            <div><dt>Email</dt><dd>{{ account.email|default:"—" }}</dd></div>
             <div><dt>Referral code</dt><dd>{{ account.profile.referral_code|default:"—" }}</dd></div>
             <div><dt>Referred by</dt><dd>{% if account.profile.referred_by %}{{ account.profile.referred_by.username }}{% else %}—{% endif %}</dd></div>
             <div><dt>Joined</dt><dd>{{ account.date_joined|date:"M d, Y" }}</dd></div>
@@ -36,12 +42,15 @@
     </article>
 
     <article class="panel">
-        <h2>Admin actions</h2>
+        <h2>Account controls</h2>
         {% if account == request.user %}
             <p class="muted">This is your own account — manage it from your profile.</p>
         {% elif account.is_superuser %}
             <p class="muted">Owner accounts are protected and can't be changed here.</p>
         {% else %}
+            <div class="row-actions" style="margin-bottom:12px;">
+                <a class="btn ghost sm" href="{% url 'dashboard:user_edit' account.id %}">Edit name / phone / balances</a>
+            </div>
             <div class="row-actions" style="margin-bottom:12px;">
                 <form method="post" action="{% url 'dashboard:user_toggle_active' account.id %}"
                       onsubmit="return confirm('{% if account.is_active %}Suspend{% else %}Reactivate{% endif %} this user?');">
@@ -50,56 +59,150 @@
                         {% if account.is_active %}Suspend account{% else %}Reactivate account{% endif %}
                     </button>
                 </form>
-            </div>
-            <div class="row-actions">
                 <form method="post" action="{% url 'dashboard:user_toggle_staff' account.id %}"
                       onsubmit="return confirm('{% if account.is_staff %}Remove admin rights from{% else %}Grant admin rights to{% endif %} this user?');">
                     {% csrf_token %}
-                    <button class="btn ghost sm" type="submit">
-                        {% if account.is_staff %}Revoke admin rights{% else %}Make admin{% endif %}
-                    </button>
+                    <button class="btn ghost sm" type="submit">{% if account.is_staff %}Revoke admin{% else %}Make admin{% endif %}</button>
                 </form>
             </div>
-            <p class="muted" style="margin-top:12px;">Suspended users can't log in. Admins can reach this control center.</p>
+            <p class="muted">Suspended users can't log in. Balances are edited on the Edit page.</p>
         {% endif %}
     </article>
+</div>
 
+<!-- ===================== Deposits (with approve/reject + plan fix) ===================== -->
+<section class="panel" style="margin-top:18px;">
+    <h2>Deposits</h2>
+    {% for d in deposits %}
+        <div class="approval-card">
+            {% if d.proof %}
+                <a href="{{ d.proof.url }}" target="_blank" rel="noopener"><img class="approval-thumb" src="{{ d.proof.url }}" alt="proof"></a>
+            {% else %}
+                <div class="approval-thumb placeholder">No proof</div>
+            {% endif %}
+            <div class="approval-meta">
+                <strong>{{ d.plan.name }} · {{ d.amount|floatformat:0|intcomma }} RWF</strong>
+                <span class="badge {{ d.status }}">{{ d.get_status_display }}</span><br>
+                <span>{{ d.created_at|date:"M d, H:i" }}{% if d.admin_note %} · {{ d.admin_note }}{% endif %}</span>
+            </div>
+            <div class="approval-actions">
+                {% if d.status == 'pending' %}
+                    <form method="post" action="{% url 'dashboard:approve_deposit' d.id %}" class="approve-form">
+                        {% csrf_token %}
+                        <label class="approve-plan">
+                            <span class="muted">Confirm / change plan</span>
+                            <select name="plan">
+                                {% for p in active_plans %}
+                                    <option value="{{ p.id }}" {% if p.id == d.plan_id %}selected{% endif %}>{{ p.name }} — {{ p.amount|floatformat:0|intcomma }} RWF</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <button class="btn success sm" type="submit">Approve &amp; activate</button>
+                    </form>
+                    <form method="post" action="{% url 'dashboard:reject_deposit' d.id %}">{% csrf_token %}
+                        <button class="btn danger sm" type="submit">Reject</button>
+                    </form>
+                {% else %}
+                    <small class="muted">Reviewed {{ d.reviewed_at|date:"M d, H:i"|default:"—" }}</small>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p class="muted" style="margin:0;">No deposits yet.</p>
+    {% endfor %}
+</section>
+
+<!-- ===================== Withdrawals (mark paid / reject) ===================== -->
+<section class="panel" style="margin-top:18px;">
+    <h2>Withdrawals</h2>
+    {% for w in withdrawals %}
+        <div class="approval-card">
+            <div class="approval-thumb placeholder">💸</div>
+            <div class="approval-meta">
+                <strong>{{ w.amount|floatformat:0|intcomma }} RWF · {{ w.phone_number }}</strong>
+                <span class="badge {{ w.status }}">{{ w.get_status_display }}</span><br>
+                <span>{{ w.created_at|date:"M d, H:i" }}{% if w.admin_note %} · {{ w.admin_note }}{% endif %}</span>
+            </div>
+            <div class="approval-actions">
+                {% if w.status == 'pending' %}
+                    <form method="post" action="{% url 'dashboard:approve_withdrawal' w.id %}"
+                          onsubmit="return confirm('Mark this withdrawal as paid? This debits the wallet.');">{% csrf_token %}
+                        <button class="btn success sm" type="submit">Mark as paid</button>
+                    </form>
+                    <form method="post" action="{% url 'dashboard:reject_withdrawal' w.id %}">{% csrf_token %}
+                        <button class="btn danger sm" type="submit">Reject</button>
+                    </form>
+                {% else %}
+                    <small class="muted">Reviewed {{ w.reviewed_at|date:"M d, H:i"|default:"—" }}</small>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p class="muted" style="margin:0;">No withdrawals yet.</p>
+    {% endfor %}
+</section>
+
+<!-- ===================== Investments (edit / credit / cancel) ===================== -->
+<section class="panel" style="margin-top:18px;">
+    <h2>Investments</h2>
+    <div class="table-wrap">
+        <table class="plan-table">
+            <thead><tr><th>Plan</th><th>Amount</th><th>Daily</th><th>Status</th><th>Earned</th><th>Ends</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for inv in investments %}
+                    <tr>
+                        <td><strong>{{ inv.plan.name }}</strong></td>
+                        <td>{{ inv.amount|floatformat:0|intcomma }} RWF</td>
+                        <td>{{ inv.daily_income|floatformat:0|intcomma }} RWF</td>
+                        <td><span class="badge {{ inv.status }}">{{ inv.get_status_display }}</span></td>
+                        <td>{{ inv.total_earned|floatformat:0|intcomma }} RWF</td>
+                        <td>{{ inv.end_date|default:"—" }}</td>
+                        <td>
+                            <div class="row-actions">
+                                <a class="btn ghost sm" href="{% url 'dashboard:investment_edit' inv.id %}">Edit</a>
+                                {% if inv.status == 'active' %}
+                                    <form method="post" action="{% url 'dashboard:investment_credit' inv.id %}">{% csrf_token %}
+                                        <button class="btn success sm" type="submit">Credit</button>
+                                    </form>
+                                    <form method="post" action="{% url 'dashboard:investment_cancel' inv.id %}" onsubmit="return confirm('Cancel this investment?');">{% csrf_token %}
+                                        <button class="btn danger sm" type="submit">Cancel</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="muted">No investments yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="dashboard-grid">
+    <!-- ===================== Transactions / earnings ledger ===================== -->
+    <article class="panel">
+        <h2>Transactions &amp; earnings</h2>
+        <ul class="list">
+            {% for t in transactions %}
+                <li>
+                    <span>{{ t.get_transaction_type_display }} <small>{{ t.created_at|date:"M d, H:i" }}</small></span>
+                    <strong>{{ t.amount|floatformat:0|intcomma }} RWF <span class="badge {{ t.status }}">{{ t.get_status_display }}</span></strong>
+                </li>
+            {% empty %}
+                <li class="muted">No transactions yet.</li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    <!-- ===================== Referrals ===================== -->
     <article class="panel">
         <h2>Referrals <small>({{ referrals|length }})</small></h2>
         <ul class="list">
             {% for r in referrals %}
-                <li><span>{{ r.full_name|default:r.user.username }}</span><small>{{ r.phone_number }}</small></li>
+                <li><a class="mini-link" href="{% url 'dashboard:user_detail' r.user_id %}">{{ r.full_name|default:r.user.username }}</a><small>{{ r.phone_number }}</small></li>
             {% empty %}
                 <li class="muted">No referrals yet.</li>
-            {% endfor %}
-        </ul>
-    </article>
-</div>
-
-<div class="dashboard-grid">
-    <article class="panel">
-        <h2>Investments</h2>
-        <ul class="list">
-            {% for inv in investments %}
-                <li>
-                    <span>{{ inv.plan.name }} <span class="badge {{ inv.status }}">{{ inv.get_status_display }}</span></span>
-                    <strong>{{ inv.total_earned|floatformat:0|intcomma }} RWF</strong>
-                </li>
-            {% empty %}
-                <li class="muted">No investments.</li>
-            {% endfor %}
-        </ul>
-    </article>
-    <article class="panel">
-        <h2>Recent Transactions</h2>
-        <ul class="list">
-            {% for t in transactions %}
-                <li>
-                    <span>{{ t.get_transaction_type_display }} <small>{{ t.created_at|date:"M d" }}</small></span>
-                    <strong>{{ t.amount|floatformat:0|intcomma }} RWF</strong>
-                </li>
-            {% empty %}
-                <li class="muted">No transactions.</li>
             {% endfor %}
         </ul>
     </article>

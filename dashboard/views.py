@@ -67,13 +67,18 @@ def admin_dashboard(request):
     return render(request, 'dashboard/admin_dashboard.html', context)
 
 
+def _back(request, fallback="dashboard:admin_dashboard"):
+    """Return to the page the action was triggered from (dashboard or user page)."""
+    return redirect(request.META.get("HTTP_REFERER") or fallback)
+
+
 @staff_member_required
 @require_POST
 def approve_deposit(request, pk):
     deposit = get_object_or_404(Deposit, pk=pk)
     if deposit.status != Deposit.PENDING:
         messages.warning(request, "That deposit was already reviewed.")
-        return redirect("dashboard:admin_dashboard")
+        return _back(request)
 
     # Plan correction: the user may have selected one plan but paid for a
     # cheaper/different one. The admin can switch the plan here instead of
@@ -96,7 +101,7 @@ def approve_deposit(request, pk):
         )
     else:
         messages.warning(request, f"Could not approve: {deposit.admin_note}")
-    return redirect("dashboard:admin_dashboard")
+    return _back(request)
 
 
 @staff_member_required
@@ -109,7 +114,7 @@ def reject_deposit(request, pk):
     else:
         deposit.reject(note)
         messages.error(request, f"Rejected {deposit.user.username}'s payment.")
-    return redirect("dashboard:admin_dashboard")
+    return _back(request)
 
 
 @staff_member_required
@@ -121,7 +126,7 @@ def approve_withdrawal(request, pk):
     else:
         withdrawal.approve()
         messages.success(request, f"Marked {withdrawal.user.username}'s withdrawal as paid.")
-    return redirect("dashboard:admin_dashboard")
+    return _back(request)
 
 
 @staff_member_required
@@ -134,7 +139,7 @@ def reject_withdrawal(request, pk):
     else:
         withdrawal.reject(note)
         messages.error(request, f"Rejected {withdrawal.user.username}'s withdrawal.")
-    return redirect("dashboard:admin_dashboard")
+    return _back(request)
 
 
 # ==========================================================================
@@ -167,11 +172,28 @@ def manage_users(request):
 @staff_member_required
 def user_detail(request, pk):
     account = get_object_or_404(User.objects.select_related("profile", "wallet"), pk=pk)
+    # keep balances/earnings current before showing them
+    for inv in account.investments.filter(status=Investment.ACTIVE):
+        inv.credit_due_earnings()
+    today = timezone.localdate()
+    total_earned = account.transactions.filter(transaction_type=Transaction.EARNING).aggregate(t=Sum("amount"))["t"] or 0
+    todays_earnings = account.transactions.filter(
+        transaction_type=Transaction.EARNING, created_at__date=today
+    ).aggregate(t=Sum("amount"))["t"] or 0
+    total_withdrawn = account.withdrawals.filter(status=Withdrawal.PAID).aggregate(t=Sum("amount"))["t"] or 0
+    total_deposited = account.deposits.filter(status=Deposit.APPROVED).aggregate(t=Sum("amount"))["t"] or 0
     return render(request, "dashboard/manage/user_detail.html", {
         "account": account, "section": "users",
-        "investments": account.investments.select_related("plan")[:20],
-        "transactions": account.transactions.all()[:20],
+        "deposits": account.deposits.select_related("plan").all()[:30],
+        "withdrawals": account.withdrawals.all()[:30],
+        "investments": account.investments.select_related("plan").all()[:30],
+        "transactions": account.transactions.all()[:40],
         "referrals": Profile.objects.filter(referred_by=account).select_related("user"),
+        "total_earned": total_earned,
+        "todays_earnings": todays_earnings,
+        "total_withdrawn": total_withdrawn,
+        "total_deposited": total_deposited,
+        "active_plans": InvestmentPlan.objects.filter(is_active=True),
     })
 
 
