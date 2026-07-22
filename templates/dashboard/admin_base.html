@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="admin-shell">
+    <aside class="admin-sidebar" id="adminSidebar">
+        <p class="sidebar-label">Admin Center</p>
+        <a href="{% url 'dashboard:admin_dashboard' %}" class="{% if section == 'overview' %}active{% endif %}">
+            <span class="ico">▦</span> Overview
+            {% if nav_pending_total %}<span class="side-badge">{{ nav_pending_total }}</span>{% endif %}
+        </a>
+        <a href="{% url 'dashboard:admin_dashboard' %}#approvals" class="{% if section == 'approvals' %}active{% endif %}">
+            <span class="ico">✔</span> Approvals
+            {% if nav_pending_total %}<span class="side-badge">{{ nav_pending_total }}</span>{% endif %}
+        </a>
+
+        <p class="sidebar-label">Manage</p>
+        <a href="{% url 'dashboard:manage_users' %}" class="{% if section == 'users' %}active{% endif %}"><span class="ico">👥</span> Users</a>
+        <a href="{% url 'dashboard:manage_plans' %}" class="{% if section == 'plans' %}active{% endif %}"><span class="ico">◆</span> Plans</a>
+        <a href="{% url 'dashboard:manage_investments' %}" class="{% if section == 'investments' %}active{% endif %}"><span class="ico">📈</span> Investments</a>
+        <a href="{% url 'dashboard:manage_transactions' %}" class="{% if section == 'transactions' %}active{% endif %}"><span class="ico">≣</span> Transactions</a>
+        <a href="{% url 'dashboard:manage_announcements' %}" class="{% if section == 'announcements' %}active{% endif %}"><span class="ico">📣</span> Announcements</a>
+        <a href="{% url 'dashboard:manage_community' %}" class="{% if section == 'community' %}active{% endif %}"><span class="ico">🔗</span> Community</a>
+
+        <p class="sidebar-label">Shortcuts</p>
+        <a href="{% url 'core:index' %}"><span class="ico">🏠</span> View site</a>
+        <a href="{% url 'dashboard:user_dashboard' %}"><span class="ico">👤</span> My dashboard</a>
+    </aside>
+
+    <section class="admin-content">
+        {% block admin_content %}{% endblock %}
+    </section>
+</div>
+{% endblock %}

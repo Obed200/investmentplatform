@@ -1,0 +1,104 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load humanize %}
+
+{% block title %}{{ account.profile.full_name|default:account.username }} | Ribural{% endblock %}
+
+{% block admin_content %}
+<div class="manage-head">
+    <div>
+        <p class="eyebrow">Account</p>
+        <h1>{{ account.profile.full_name|default:account.username }}</h1>
+    </div>
+    <a class="btn ghost" href="{% url 'dashboard:manage_users' %}">← All users</a>
+</div>
+
+<section class="stats-grid">
+    <article><span>Current Balance</span><strong>{% if account.wallet %}{{ account.wallet.current_balance|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
+    <article><span>Withdrawable</span><strong>{% if account.wallet %}{{ account.wallet.withdrawable_balance|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
+    <article><span>Daily Earnings</span><strong>{% if account.wallet %}{{ account.wallet.daily_earnings|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
+    <article><span>Referral Bonus</span><strong>{% if account.wallet %}{{ account.wallet.referral_bonus|floatformat:0|intcomma }}{% else %}0{% endif %} RWF</strong></article>
+</section>
+
+<div class="dashboard-grid">
+    <article class="panel">
+        <h2>Profile</h2>
+        <dl class="detail-list">
+            <div><dt>Phone / login</dt><dd>{{ account.profile.phone_number|default:account.username }}</dd></div>
+            <div><dt>Referral code</dt><dd>{{ account.profile.referral_code|default:"—" }}</dd></div>
+            <div><dt>Referred by</dt><dd>{% if account.profile.referred_by %}{{ account.profile.referred_by.username }}{% else %}—{% endif %}</dd></div>
+            <div><dt>Joined</dt><dd>{{ account.date_joined|date:"M d, Y" }}</dd></div>
+            <div><dt>Role</dt><dd>{% if account.is_superuser %}Owner{% elif account.is_staff %}Admin{% else %}Member{% endif %}</dd></div>
+            <div><dt>Status</dt><dd>{% if account.is_active %}<span class="badge active">Active</span>{% else %}<span class="badge rejected">Suspended</span>{% endif %}</dd></div>
+        </dl>
+    </article>
+
+    <article class="panel">
+        <h2>Admin actions</h2>
+        {% if account == request.user %}
+            <p class="muted">This is your own account — manage it from your profile.</p>
+        {% elif account.is_superuser %}
+            <p class="muted">Owner accounts are protected and can't be changed here.</p>
+        {% else %}
+            <div class="row-actions" style="margin-bottom:12px;">
+                <form method="post" action="{% url 'dashboard:user_toggle_active' account.id %}"
+                      onsubmit="return confirm('{% if account.is_active %}Suspend{% else %}Reactivate{% endif %} this user?');">
+                    {% csrf_token %}
+                    <button class="btn {% if account.is_active %}danger{% else %}success{% endif %} sm" type="submit">
+                        {% if account.is_active %}Suspend account{% else %}Reactivate account{% endif %}
+                    </button>
+                </form>
+            </div>
+            <div class="row-actions">
+                <form method="post" action="{% url 'dashboard:user_toggle_staff' account.id %}"
+                      onsubmit="return confirm('{% if account.is_staff %}Remove admin rights from{% else %}Grant admin rights to{% endif %} this user?');">
+                    {% csrf_token %}
+                    <button class="btn ghost sm" type="submit">
+                        {% if account.is_staff %}Revoke admin rights{% else %}Make admin{% endif %}
+                    </button>
+                </form>
+            </div>
+            <p class="muted" style="margin-top:12px;">Suspended users can't log in. Admins can reach this control center.</p>
+        {% endif %}
+    </article>
+
+    <article class="panel">
+        <h2>Referrals <small>({{ referrals|length }})</small></h2>
+        <ul class="list">
+            {% for r in referrals %}
+                <li><span>{{ r.full_name|default:r.user.username }}</span><small>{{ r.phone_number }}</small></li>
+            {% empty %}
+                <li class="muted">No referrals yet.</li>
+            {% endfor %}
+        </ul>
+    </article>
+</div>
+
+<div class="dashboard-grid">
+    <article class="panel">
+        <h2>Investments</h2>
+        <ul class="list">
+            {% for inv in investments %}
+                <li>
+                    <span>{{ inv.plan.name }} <span class="badge {{ inv.status }}">{{ inv.get_status_display }}</span></span>
+                    <strong>{{ inv.total_earned|floatformat:0|intcomma }} RWF</strong>
+                </li>
+            {% empty %}
+                <li class="muted">No investments.</li>
+            {% endfor %}
+        </ul>
+    </article>
+    <article class="panel">
+        <h2>Recent Transactions</h2>
+        <ul class="list">
+            {% for t in transactions %}
+                <li>
+                    <span>{{ t.get_transaction_type_display }} <small>{{ t.created_at|date:"M d" }}</small></span>
+                    <strong>{{ t.amount|floatformat:0|intcomma }} RWF</strong>
+                </li>
+            {% empty %}
+                <li class="muted">No transactions.</li>
+            {% endfor %}
+        </ul>
+    </article>
+</div>
+{% endblock %}

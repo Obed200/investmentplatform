@@ -1,5 +1,29 @@
 console.log('Ribural static files loaded.');
 
+function setupMobileNav() {
+	const toggle = document.getElementById('navToggle');
+	const nav = document.getElementById('siteNav');
+	if (!toggle || !nav) return;
+	toggle.addEventListener('click', () => {
+		const open = nav.classList.toggle('open');
+		toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+	});
+	nav.addEventListener('click', (e) => {
+		if (e.target.closest('a')) {
+			nav.classList.remove('open');
+			toggle.setAttribute('aria-expanded', 'false');
+		}
+	});
+	document.addEventListener('click', (e) => {
+		if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+			nav.classList.remove('open');
+			toggle.setAttribute('aria-expanded', 'false');
+		}
+	});
+}
+
+document.addEventListener('DOMContentLoaded', setupMobileNav);
+
 function setupReferralShare() {
 	const copyBtn = document.getElementById('copyReferral');
 	const shareBtn = document.getElementById('shareReferral');

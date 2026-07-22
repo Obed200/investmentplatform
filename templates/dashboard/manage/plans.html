@@ -1,0 +1,54 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load humanize %}
+
+{% block title %}Manage Plans | Ribural{% endblock %}
+
+{% block admin_content %}
+<div class="manage-head">
+    <div>
+        <p class="eyebrow">Investment products</p>
+        <h1>Manage Plans</h1>
+    </div>
+    <a class="btn primary" href="{% url 'dashboard:plan_create' %}">+ New plan</a>
+</div>
+
+<div class="table-wrap">
+    <table class="plan-table">
+        <thead>
+            <tr>
+                <th>Name</th><th>Amount</th><th>Daily</th><th>Days</th>
+                <th>Revenue</th><th>Order</th><th>Status</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in plans %}
+                <tr>
+                    <td><strong>{{ plan.name }}</strong></td>
+                    <td>{{ plan.amount|floatformat:0|intcomma }} RWF</td>
+                    <td>{{ plan.daily_income|floatformat:0|intcomma }} RWF</td>
+                    <td>{{ plan.duration_days }}</td>
+                    <td>{{ plan.total_revenue|floatformat:0|intcomma }} RWF</td>
+                    <td>{{ plan.sort_order }}</td>
+                    <td>
+                        {% if plan.is_active %}<span class="badge active">Active</span>
+                        {% else %}<span class="badge rejected">Inactive</span>{% endif %}
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            <a class="btn ghost sm" href="{% url 'dashboard:plan_edit' plan.id %}">Edit</a>
+                            <form method="post" action="{% url 'dashboard:plan_toggle' plan.id %}">{% csrf_token %}
+                                <button class="btn ghost sm" type="submit">{% if plan.is_active %}Disable{% else %}Enable{% endif %}</button>
+                            </form>
+                            <form method="post" action="{% url 'dashboard:plan_delete' plan.id %}" onsubmit="return confirm('Delete {{ plan.name|escapejs }}?');">{% csrf_token %}
+                                <button class="btn danger sm" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="muted">No plans yet. Create your first one.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

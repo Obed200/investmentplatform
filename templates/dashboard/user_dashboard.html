@@ -36,8 +36,24 @@
     </article>
     <article class="panel">
         <h2>Pending Requests</h2>
-        <p>Deposit: {{ pending_deposit|default:"None" }}</p>
-        <p>Withdrawal: {{ pending_withdrawal|default:"None" }}</p>
+        <ul class="list">
+            <li>
+                <span>Deposit</span>
+                {% if pending_deposit %}
+                    <span class="badge pending">{{ pending_deposit.amount|floatformat:0|intcomma }} RWF · awaiting</span>
+                {% else %}
+                    <small>None</small>
+                {% endif %}
+            </li>
+            <li>
+                <span>Withdrawal</span>
+                {% if pending_withdrawal %}
+                    <span class="badge pending">{{ pending_withdrawal.amount|floatformat:0|intcomma }} RWF · awaiting</span>
+                {% else %}
+                    <small>None</small>
+                {% endif %}
+            </li>
+        </ul>
     </article>
     <article class="panel">
         <h2>Community</h2>
