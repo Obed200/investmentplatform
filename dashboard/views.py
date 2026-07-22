@@ -3,6 +3,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,7 +15,7 @@ from investments.models import Investment, InvestmentPlan
 from payments.models import Deposit, Withdrawal
 from transactions.models import Transaction
 
-from .forms import AnnouncementForm, InvestmentPlanForm, SiteSettingsForm
+from .forms import AnnouncementForm, InvestmentForm, InvestmentPlanForm, SiteSettingsForm, UserAdminForm
 
 
 @login_required
@@ -60,6 +61,7 @@ def admin_dashboard(request):
         "pending_withdrawal_list": Withdrawal.objects.filter(status=Withdrawal.PENDING).select_related("user", "user__profile"),
         "recent_users": Profile.objects.select_related("user").order_by("-created_at")[:8],
         "recent_transactions": Transaction.objects.select_related("user")[:10],
+        "active_plans": InvestmentPlan.objects.filter(is_active=True),
         "section": "overview",
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
@@ -71,15 +73,29 @@ def approve_deposit(request, pk):
     deposit = get_object_or_404(Deposit, pk=pk)
     if deposit.status != Deposit.PENDING:
         messages.warning(request, "That deposit was already reviewed.")
+        return redirect("dashboard:admin_dashboard")
+
+    # Plan correction: the user may have selected one plan but paid for a
+    # cheaper/different one. The admin can switch the plan here instead of
+    # rejecting, so the activated investment matches what was actually paid.
+    plan_id = request.POST.get("plan")
+    if plan_id and str(deposit.plan_id) != str(plan_id):
+        new_plan = InvestmentPlan.objects.filter(pk=plan_id, is_active=True).first()
+        if new_plan:
+            old_name = deposit.plan.name
+            deposit.plan = new_plan
+            deposit.amount = new_plan.amount
+            deposit.save(update_fields=["plan", "amount"])
+            messages.info(request, f"Plan changed from {old_name} to {new_plan.name} before approval.")
+
+    deposit.approve()
+    if deposit.status == Deposit.APPROVED:
+        messages.success(
+            request,
+            f"Approved {deposit.user.username}'s payment. Investment in {deposit.plan.name} is now active.",
+        )
     else:
-        deposit.approve()
-        if deposit.status == Deposit.APPROVED:
-            messages.success(
-                request,
-                f"Approved {deposit.user.username}'s payment. Investment in {deposit.plan.name} is now active.",
-            )
-        else:
-            messages.warning(request, f"Could not approve: {deposit.admin_note}")
+        messages.warning(request, f"Could not approve: {deposit.admin_note}")
     return redirect("dashboard:admin_dashboard")
 
 
@@ -156,6 +172,51 @@ def user_detail(request, pk):
         "investments": account.investments.select_related("plan")[:20],
         "transactions": account.transactions.all()[:20],
         "referrals": Profile.objects.filter(referred_by=account).select_related("user"),
+    })
+
+
+@staff_member_required
+def user_edit(request, pk):
+    account = get_object_or_404(User.objects.select_related("profile", "wallet"), pk=pk)
+    wallet = account.wallet
+    initial = {
+        "full_name": account.profile.full_name,
+        "phone_number": account.profile.phone_number,
+        "email": account.email,
+        "current_balance": wallet.current_balance,
+        "withdrawable_balance": wallet.withdrawable_balance,
+        "referral_bonus": wallet.referral_bonus,
+        "daily_earnings": wallet.daily_earnings,
+    }
+    form = UserAdminForm(request.POST or None, account=account, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        cd = form.cleaned_data
+        try:
+            with transaction.atomic():
+                profile = account.profile
+                profile.full_name = cd["full_name"]
+                profile.phone_number = cd["phone_number"]
+                profile.save(update_fields=["full_name", "phone_number"])
+                account.username = cd["phone_number"]
+                account.first_name = cd["full_name"]
+                account.email = cd["email"]
+                account.save(update_fields=["username", "first_name", "email"])
+                wallet.current_balance = cd["current_balance"]
+                wallet.withdrawable_balance = cd["withdrawable_balance"]
+                wallet.referral_bonus = cd["referral_bonus"]
+                wallet.daily_earnings = cd["daily_earnings"]
+                wallet.save(update_fields=[
+                    "current_balance", "withdrawable_balance", "referral_bonus", "daily_earnings",
+                ])
+        except IntegrityError:
+            form.add_error("phone_number", "Another account already uses this phone number.")
+        else:
+            messages.success(request, f"{account.username}'s account was updated.")
+            return redirect("dashboard:user_detail", pk=account.pk)
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "users",
+        "title": f"Edit {account.profile.full_name or account.username}",
+        "back_url": "dashboard:manage_users",
     })
 
 
@@ -269,6 +330,22 @@ def manage_investments(request):
     return render(request, "dashboard/manage/investments.html", {
         "page_obj": page, "section": "investments",
         "status": status, "q": q, "status_choices": Investment.STATUS_CHOICES,
+    })
+
+
+@staff_member_required
+def investment_edit(request, pk):
+    investment = get_object_or_404(Investment.objects.select_related("user", "plan"), pk=pk)
+    form = InvestmentForm(request.POST or None, instance=investment)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Investment for {investment.user.username} updated. The user's dashboard now reflects the change.")
+        return redirect("dashboard:manage_investments")
+    who = investment.user.profile.full_name or investment.user.username
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "investments",
+        "title": f"Edit investment — {who}",
+        "back_url": "dashboard:manage_investments",
     })
 
 

@@ -43,6 +43,7 @@
                     <td>{{ inv.end_date|default:"—" }}</td>
                     <td>
                         <div class="row-actions">
+                            <a class="btn ghost sm" href="{% url 'dashboard:investment_edit' inv.id %}">Edit</a>
                             {% if inv.status == 'active' %}
                                 <form method="post" action="{% url 'dashboard:investment_credit' inv.id %}">{% csrf_token %}
                                     <button class="btn success sm" type="submit">Credit</button>
@@ -50,7 +51,7 @@
                                 <form method="post" action="{% url 'dashboard:investment_cancel' inv.id %}" onsubmit="return confirm('Cancel this investment?');">{% csrf_token %}
                                     <button class="btn danger sm" type="submit">Cancel</button>
                                 </form>
-                            {% else %}<small class="muted">—</small>{% endif %}
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

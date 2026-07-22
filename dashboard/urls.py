@@ -17,6 +17,7 @@ urlpatterns = [
     # Users
     path('admin/users/', views.manage_users, name='manage_users'),
     path('admin/users/<int:pk>/', views.user_detail, name='user_detail'),
+    path('admin/users/<int:pk>/edit/', views.user_edit, name='user_edit'),
     path('admin/users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
     path('admin/users/<int:pk>/toggle-staff/', views.user_toggle_staff, name='user_toggle_staff'),
 
@@ -29,6 +30,7 @@ urlpatterns = [
 
     # Investments
     path('admin/investments/', views.manage_investments, name='manage_investments'),
+    path('admin/investments/<int:pk>/edit/', views.investment_edit, name='investment_edit'),
     path('admin/investments/<int:pk>/credit/', views.investment_credit, name='investment_credit'),
     path('admin/investments/<int:pk>/cancel/', views.investment_cancel, name='investment_cancel'),
 
