@@ -17,6 +17,12 @@ def deposit_create(request):
         status__in=[Investment.PENDING, Investment.ACTIVE],
     ).exists() or Deposit.objects.filter(user=request.user, status=Deposit.PENDING).exists()
     plans = InvestmentPlan.objects.filter(is_active=True)
+
+    # The plan may be chosen from the Library ("Invest" button) and carried here
+    # via ?plan=<id> so the user never has to pick it again.
+    plan_id = request.POST.get("plan") or request.GET.get("plan")
+    selected_plan = plans.filter(pk=plan_id).first() if plan_id else None
+
     form = DepositForm(request.POST or None, request.FILES or None, plans=plans)
     if request.method == "POST":
         if active_or_pending:
@@ -38,6 +44,8 @@ def deposit_create(request):
         'payments/deposit_create.html',
         {
             "form": form,
+            "plans": plans,
+            "selected_plan": selected_plan,
             "payment_code": settings.PAYMENT_CODE,
             "payment_ussd": settings.PAYMENT_USSD,
             "active_or_pending": active_or_pending,

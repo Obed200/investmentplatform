@@ -46,8 +46,7 @@
                 <div><span>Revenue</span><strong>{{ plan.total_revenue|floatformat:0|intcomma }} RWF</strong></div>
             </div>
             <div style="margin-top:14px; display:flex; gap:8px;">
-                <a class="btn primary" href="{% url 'payments:deposit_create' %}">Invest Now</a>
-                <a class="btn ghost" href="#">Details</a>
+                <a class="btn primary full" href="{% url 'payments:deposit_create' %}?plan={{ plan.id }}">Invest Now</a>
             </div>
         </article>
     {% empty %}

@@ -6,30 +6,107 @@
 {% block content %}
 <section class="section-head">
     <p class="eyebrow">Administration</p>
-    <h1>Admin Dashboard</h1>
+    <h1>Admin Control Center</h1>
 </section>
+
 <section class="stats-grid">
     <article><span>Total Users</span><strong>{{ total_users }}</strong></article>
-    <article><span>Total Deposits</span><strong>{{ total_deposits|floatformat:0|intcomma }} RWF</strong></article>
-    <article><span>Total Withdrawals</span><strong>{{ total_withdrawals|floatformat:0|intcomma }} RWF</strong></article>
-    <article><span>Total Investments</span><strong>{{ total_investments }}</strong></article>
+    <article><span>Approved Deposits</span><strong>{{ total_deposits|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Paid Withdrawals</span><strong>{{ total_withdrawals|floatformat:0|intcomma }} RWF</strong></article>
+    <article><span>Active Investments</span><strong>{{ active_investments }}</strong></article>
     <article><span>Today's Earnings</span><strong>{{ todays_earnings|floatformat:0|intcomma }} RWF</strong></article>
-    <article><span>Pending Deposits</span><strong>{{ pending_deposits }}</strong></article>
-    <article><span>Pending Withdrawals</span><strong>{{ pending_withdrawals }}</strong></article>
+    <article><span>Pending Deposits</span><strong>{{ pending_deposits_count }}</strong></article>
+    <article><span>Pending Withdrawals</span><strong>{{ pending_withdrawals_count }}</strong></article>
     <article><span>Referral Bonuses</span><strong>{{ referral_bonuses|floatformat:0|intcomma }} RWF</strong></article>
 </section>
-<section class="quick-actions">
-    <a class="btn primary" href="{% url 'admin:payments_deposit_changelist' %}">Review Deposits</a>
-    <a class="btn dark" href="{% url 'admin:payments_withdrawal_changelist' %}">Review Withdrawals</a>
-    <a class="btn ghost" href="{% url 'admin:core_sitesettings_changelist' %}">Community Links</a>
-    <a class="btn ghost" href="{% url 'admin:investments_investmentplan_changelist' %}">Manage Plans</a>
+
+<!-- ============ Deposit approvals: approving confirms the investment ============ -->
+<section class="panel" style="margin-top:24px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <h2 style="margin:0;">Deposit Approvals</h2>
+        <span class="badge pending">{{ pending_deposits_count }} waiting</span>
+    </div>
+    <p class="muted" style="margin:6px 0 16px;">Approving a payment confirms it and instantly activates the user's investment.</p>
+
+    {% for deposit in pending_deposit_list %}
+        <div class="approval-card">
+            {% if deposit.proof %}
+                <a href="{{ deposit.proof.url }}" target="_blank" rel="noopener">
+                    <img class="approval-thumb" src="{{ deposit.proof.url }}" alt="Payment proof from {{ deposit.user.username }}">
+                </a>
+            {% else %}
+                <div class="approval-thumb placeholder">No proof</div>
+            {% endif %}
+            <div class="approval-meta">
+                <strong>{{ deposit.user.profile.full_name|default:deposit.user.username }}</strong>
+                <span>{{ deposit.plan.name }} &middot; {{ deposit.amount|floatformat:0|intcomma }} RWF</span><br>
+                <span>{{ deposit.user.profile.phone_number }} &middot; {{ deposit.created_at|date:"M d, H:i" }}</span>
+            </div>
+            <div class="approval-actions">
+                <form method="post" action="{% url 'dashboard:approve_deposit' deposit.id %}">
+                    {% csrf_token %}
+                    <button class="btn success sm" type="submit">Approve &amp; activate</button>
+                </form>
+                <form method="post" action="{% url 'dashboard:reject_deposit' deposit.id %}">
+                    {% csrf_token %}
+                    <button class="btn danger sm" type="submit">Reject</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p class="muted" style="margin:0;">No deposits waiting for review. 🎉</p>
+    {% endfor %}
 </section>
+
+<!-- ============ Withdrawal approvals ============ -->
+<section class="panel" style="margin-top:18px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <h2 style="margin:0;">Withdrawal Requests</h2>
+        <span class="badge pending">{{ pending_withdrawals_count }} waiting</span>
+    </div>
+    <p class="muted" style="margin:6px 0 16px;">Approving marks the withdrawal as paid and debits the user's wallet.</p>
+
+    {% for withdrawal in pending_withdrawal_list %}
+        <div class="approval-card">
+            <div class="approval-thumb placeholder">💸</div>
+            <div class="approval-meta">
+                <strong>{{ withdrawal.user.profile.full_name|default:withdrawal.user.username }}</strong>
+                <span>{{ withdrawal.amount|floatformat:0|intcomma }} RWF &middot; {{ withdrawal.phone_number }}</span><br>
+                <span>Balance: {{ withdrawal.user.wallet.withdrawable_balance|floatformat:0|intcomma }} RWF &middot; {{ withdrawal.created_at|date:"M d, H:i" }}</span>
+            </div>
+            <div class="approval-actions">
+                <form method="post" action="{% url 'dashboard:approve_withdrawal' withdrawal.id %}">
+                    {% csrf_token %}
+                    <button class="btn success sm" type="submit">Mark as paid</button>
+                </form>
+                <form method="post" action="{% url 'dashboard:reject_withdrawal' withdrawal.id %}">
+                    {% csrf_token %}
+                    <button class="btn danger sm" type="submit">Reject</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p class="muted" style="margin:0;">No withdrawal requests pending.</p>
+    {% endfor %}
+</section>
+
+<!-- ============ Management shortcuts ============ -->
+<section class="quick-actions" style="margin-top:22px;">
+    <a class="btn ghost" href="{% url 'admin:investments_investmentplan_changelist' %}">Manage Plans</a>
+    <a class="btn ghost" href="{% url 'admin:investments_investment_changelist' %}">All Investments</a>
+    <a class="btn ghost" href="{% url 'admin:transactions_transaction_changelist' %}">All Transactions</a>
+    <a class="btn ghost" href="{% url 'admin:core_sitesettings_changelist' %}">Community Links</a>
+    <a class="btn ghost" href="{% url 'admin:core_announcement_changelist' %}">Announcements</a>
+</section>
+
 <div class="dashboard-grid">
     <article class="panel">
         <h2>Recent Users</h2>
         <ul class="list">
             {% for profile in recent_users %}
-                <li><span>{{ profile.full_name }}</span><small>{{ profile.phone_number }}</small></li>
+                <li><span>{{ profile.full_name|default:profile.user.username }}</span><small>{{ profile.phone_number }}</small></li>
+            {% empty %}
+                <li class="muted">No users yet.</li>
             {% endfor %}
         </ul>
     </article>
@@ -37,7 +114,12 @@
         <h2>Recent Transactions</h2>
         <ul class="list">
             {% for transaction in recent_transactions %}
-                <li><span>{{ transaction.user.username }} {{ transaction.get_transaction_type_display }}</span><strong>{{ transaction.amount|floatformat:0|intcomma }}</strong></li>
+                <li>
+                    <span>{{ transaction.user.username }} &middot; {{ transaction.get_transaction_type_display }}</span>
+                    <strong>{{ transaction.amount|floatformat:0|intcomma }} RWF</strong>
+                </li>
+            {% empty %}
+                <li class="muted">No transactions yet.</li>
             {% endfor %}
         </ul>
     </article>

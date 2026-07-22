@@ -1,9 +1,11 @@
 {% load static %}
+{% load humanize %}
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f172a">
     <title>{% block title %}RIBURAL INVESTMENTS{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
@@ -13,9 +15,13 @@
             <span class="brand-mark">R</span>
             <span>RIBURAL <strong>INVESTMENTS</strong></span>
         </a>
-        <nav>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+        <nav id="siteNav">
             <a href="{% url 'investments:plan_list' %}">Library</a>
             {% if user.is_authenticated %}
+                {% if user.wallet %}
+                    <a href="{% url 'dashboard:user_dashboard' %}" class="wallet-chip"><span class="dot"></span>{{ user.wallet.current_balance|floatformat:0|intcomma }} RWF</a>
+                {% endif %}
                 <a href="{% url 'dashboard:user_dashboard' %}">Dashboard</a>
                 <a href="{% url 'accounts:profile' %}">Account</a>
                 {% if user.is_staff %}<a href="{% url 'dashboard:admin_dashboard' %}">Admin Center</a>{% endif %}
