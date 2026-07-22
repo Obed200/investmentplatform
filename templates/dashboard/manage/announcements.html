@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Announcements | Ribural{% endblock %}
+
+{% block content %}
+{% include 'dashboard/manage/_nav.html' %}
+
+<div class="manage-head">
+    <div>
+        <p class="eyebrow">Broadcast</p>
+        <h1>Announcements</h1>
+    </div>
+    <a class="btn primary" href="{% url 'dashboard:announcement_create' %}">+ New announcement</a>
+</div>
+
+<div class="dashboard-grid">
+    {% for a in announcements %}
+        <article class="panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <h2 style="margin:0;">{{ a.title }}</h2>
+                {% if a.is_active %}<span class="badge active">Active</span>{% else %}<span class="badge rejected">Hidden</span>{% endif %}
+            </div>
+            <p class="muted" style="margin:8px 0;">{{ a.message|truncatewords:30 }}</p>
+            <small class="muted">{{ a.created_at|date:"M d, Y" }}</small>
+            <div class="row-actions" style="margin-top:12px;">
+                <a class="btn ghost sm" href="{% url 'dashboard:announcement_edit' a.id %}">Edit</a>
+                <form method="post" action="{% url 'dashboard:announcement_toggle' a.id %}">{% csrf_token %}
+                    <button class="btn ghost sm" type="submit">{% if a.is_active %}Hide{% else %}Show{% endif %}</button>
+                </form>
+                <form method="post" action="{% url 'dashboard:announcement_delete' a.id %}" onsubmit="return confirm('Delete this announcement?');">{% csrf_token %}
+                    <button class="btn danger sm" type="submit">Delete</button>
+                </form>
+            </div>
+        </article>
+    {% empty %}
+        <article class="panel muted">No announcements yet. Create one to show it on the home page and dashboards.</article>
+    {% endfor %}
+</div>
+{% endblock %}

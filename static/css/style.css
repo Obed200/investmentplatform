@@ -588,6 +588,70 @@ input:focus, select:focus, textarea:focus {
 .plan-summary .plan-price { font-size: 30px; font-weight: 900; color: var(--orange-dark); margin: 8px 0; }
 .plan-summary .detail-list { margin-top: 12px; }
 
+/* ------------------------------ Management pages ------------------------------ */
+.manage-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 20px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+}
+.manage-nav a {
+    padding: 9px 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--night);
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+}
+.manage-nav a:hover { background: var(--brand-grad-soft); color: var(--orange-dark); }
+.manage-nav a.active { background: var(--brand-grad); color: var(--white); box-shadow: 0 6px 16px rgba(255,106,19,.3); }
+
+.manage-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+.manage-head h1 { margin: 0; font-size: clamp(26px, 4vw, 40px); color: var(--night); letter-spacing: -.5px; }
+.manage-head .eyebrow { margin-bottom: 4px; }
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 14px;
+    margin-bottom: 16px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+.filter-bar input, .filter-bar select { width: auto; min-width: 160px; flex: 1 1 160px; min-height: 42px; }
+.filter-bar .btn { flex: 0 0 auto; }
+
+.row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.row-actions form { margin: 0; }
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 20px;
+}
+.page-info { color: var(--muted); font-weight: 700; font-size: 14px; }
+
 /* ------------------------------ Messages ------------------------------ */
 .messages {
     width: min(1180px, calc(100% - 32px));

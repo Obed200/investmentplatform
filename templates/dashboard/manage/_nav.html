@@ -1,0 +1,9 @@
+{% load static %}
+<nav class="manage-nav">
+    <a href="{% url 'dashboard:admin_dashboard' %}">← Control Center</a>
+    <a href="{% url 'dashboard:manage_plans' %}" class="{% if section == 'plans' %}active{% endif %}">Plans</a>
+    <a href="{% url 'dashboard:manage_investments' %}" class="{% if section == 'investments' %}active{% endif %}">Investments</a>
+    <a href="{% url 'dashboard:manage_transactions' %}" class="{% if section == 'transactions' %}active{% endif %}">Transactions</a>
+    <a href="{% url 'dashboard:manage_announcements' %}" class="{% if section == 'announcements' %}active{% endif %}">Announcements</a>
+    <a href="{% url 'dashboard:manage_community' %}" class="{% if section == 'community' %}active{% endif %}">Community</a>
+</nav>

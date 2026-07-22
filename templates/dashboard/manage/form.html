@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} | Ribural{% endblock %}
+
+{% block content %}
+{% include 'dashboard/manage/_nav.html' %}
+
+<div class="manage-head">
+    <div>
+        <p class="eyebrow">Manage</p>
+        <h1>{{ title }}</h1>
+    </div>
+    <a class="btn ghost" href="{% url back_url %}">← Back</a>
+</div>
+
+<article class="form-card narrow">
+    <form method="post" class="stack-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+                {{ field.errors }}
+            </p>
+        {% endfor %}
+        <div class="row-actions">
+            <button class="btn primary" type="submit">Save</button>
+            <a class="btn ghost" href="{% url back_url %}">Cancel</a>
+        </div>
+    </form>
+</article>
+
+{% if delete_url and object %}
+<article class="form-card narrow" style="margin-top:16px; border-color:#f3a8a1;">
+    <h2 style="margin-top:0;">Danger zone</h2>
+    <p class="muted">Permanently remove this record. This cannot be undone.</p>
+    <form method="post" action="{% url delete_url object.id %}" onsubmit="return confirm('Delete this record permanently?');">
+        {% csrf_token %}
+        <button class="btn danger" type="submit">Delete</button>
+    </form>
+</article>
+{% endif %}
+{% endblock %}

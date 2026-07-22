@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}All Investments | Ribural{% endblock %}
+
+{% block content %}
+{% include 'dashboard/manage/_nav.html' %}
+
+<div class="manage-head">
+    <div>
+        <p class="eyebrow">Portfolio</p>
+        <h1>All Investments</h1>
+    </div>
+</div>
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search user or plan…">
+    <select name="status">
+        <option value="">All statuses</option>
+        {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn primary sm" type="submit">Filter</button>
+    <a class="btn ghost sm" href="{% url 'dashboard:manage_investments' %}">Reset</a>
+</form>
+
+<div class="table-wrap">
+    <table class="plan-table">
+        <thead>
+            <tr>
+                <th>User</th><th>Plan</th><th>Amount</th><th>Daily</th>
+                <th>Status</th><th>Earned</th><th>Ends</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in page_obj %}
+                <tr>
+                    <td><strong>{{ inv.user.profile.full_name|default:inv.user.username }}</strong><br><small>{{ inv.user.username }}</small></td>
+                    <td>{{ inv.plan.name }}</td>
+                    <td>{{ inv.amount|floatformat:0|intcomma }} RWF</td>
+                    <td>{{ inv.daily_income|floatformat:0|intcomma }} RWF</td>
+                    <td><span class="badge {{ inv.status }}">{{ inv.get_status_display }}</span></td>
+                    <td>{{ inv.total_earned|floatformat:0|intcomma }} RWF</td>
+                    <td>{{ inv.end_date|default:"—" }}</td>
+                    <td>
+                        <div class="row-actions">
+                            {% if inv.status == 'active' %}
+                                <form method="post" action="{% url 'dashboard:investment_credit' inv.id %}">{% csrf_token %}
+                                    <button class="btn success sm" type="submit">Credit</button>
+                                </form>
+                                <form method="post" action="{% url 'dashboard:investment_cancel' inv.id %}" onsubmit="return confirm('Cancel this investment?');">{% csrf_token %}
+                                    <button class="btn danger sm" type="submit">Cancel</button>
+                                </form>
+                            {% else %}<small class="muted">—</small>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="muted">No investments match your filters.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'dashboard/manage/_pagination.html' %}
+{% endblock %}

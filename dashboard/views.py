@@ -1,16 +1,19 @@
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Sum
+from django.core.paginator import Paginator
+from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import Profile
 from core.models import Announcement, SiteSettings
-from investments.models import Investment
+from investments.models import Investment, InvestmentPlan
 from payments.models import Deposit, Withdrawal
 from transactions.models import Transaction
+
+from .forms import AnnouncementForm, InvestmentPlanForm, SiteSettingsForm
 
 
 @login_required
@@ -114,3 +117,196 @@ def reject_withdrawal(request, pk):
         withdrawal.reject(note)
         messages.error(request, f"Rejected {withdrawal.user.username}'s withdrawal.")
     return redirect("dashboard:admin_dashboard")
+
+
+# ==========================================================================
+# Management pages (in-dashboard CRUD, replacing the Django admin screens)
+# ==========================================================================
+
+# -------- Investment plans --------
+@staff_member_required
+def manage_plans(request):
+    plans = InvestmentPlan.objects.all()
+    return render(request, "dashboard/manage/plans.html", {"plans": plans, "section": "plans"})
+
+
+@staff_member_required
+def plan_create(request):
+    form = InvestmentPlanForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        plan = form.save()
+        messages.success(request, f"Plan '{plan.name}' created.")
+        return redirect("dashboard:manage_plans")
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "plans", "title": "New investment plan",
+        "back_url": "dashboard:manage_plans",
+    })
+
+
+@staff_member_required
+def plan_edit(request, pk):
+    plan = get_object_or_404(InvestmentPlan, pk=pk)
+    form = InvestmentPlanForm(request.POST or None, instance=plan)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Plan '{plan.name}' updated.")
+        return redirect("dashboard:manage_plans")
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "plans", "title": f"Edit {plan.name}",
+        "back_url": "dashboard:manage_plans", "delete_url": "dashboard:plan_delete", "object": plan,
+    })
+
+
+@staff_member_required
+@require_POST
+def plan_delete(request, pk):
+    plan = get_object_or_404(InvestmentPlan, pk=pk)
+    if plan.investments.exists() or plan.deposits.exists():
+        messages.error(request, f"Cannot delete '{plan.name}' — it has investments or deposits. Deactivate it instead.")
+    else:
+        name = plan.name
+        plan.delete()
+        messages.success(request, f"Plan '{name}' deleted.")
+    return redirect("dashboard:manage_plans")
+
+
+@staff_member_required
+@require_POST
+def plan_toggle(request, pk):
+    plan = get_object_or_404(InvestmentPlan, pk=pk)
+    plan.is_active = not plan.is_active
+    plan.save(update_fields=["is_active"])
+    messages.success(request, f"Plan '{plan.name}' is now {'active' if plan.is_active else 'inactive'}.")
+    return redirect("dashboard:manage_plans")
+
+
+# -------- Investments --------
+@staff_member_required
+def manage_investments(request):
+    investments = Investment.objects.select_related("user", "plan").all()
+    status = request.GET.get("status", "")
+    q = request.GET.get("q", "").strip()
+    if status:
+        investments = investments.filter(status=status)
+    if q:
+        investments = investments.filter(
+            Q(user__username__icontains=q) | Q(user__profile__full_name__icontains=q) | Q(plan__name__icontains=q)
+        )
+    page = Paginator(investments, 25).get_page(request.GET.get("page"))
+    return render(request, "dashboard/manage/investments.html", {
+        "page_obj": page, "section": "investments",
+        "status": status, "q": q, "status_choices": Investment.STATUS_CHOICES,
+    })
+
+
+@staff_member_required
+@require_POST
+def investment_credit(request, pk):
+    investment = get_object_or_404(Investment, pk=pk)
+    days = investment.credit_due_earnings()
+    messages.success(request, f"Credited {days} day(s) of earnings for {investment.user.username}.")
+    return redirect(request.META.get("HTTP_REFERER") or "dashboard:manage_investments")
+
+
+@staff_member_required
+@require_POST
+def investment_cancel(request, pk):
+    investment = get_object_or_404(Investment, pk=pk)
+    investment.status = Investment.CANCELLED
+    investment.save(update_fields=["status"])
+    messages.warning(request, f"Investment for {investment.user.username} cancelled.")
+    return redirect(request.META.get("HTTP_REFERER") or "dashboard:manage_investments")
+
+
+# -------- Transactions --------
+@staff_member_required
+def manage_transactions(request):
+    txns = Transaction.objects.select_related("user").all()
+    ttype = request.GET.get("type", "")
+    status = request.GET.get("status", "")
+    q = request.GET.get("q", "").strip()
+    if ttype:
+        txns = txns.filter(transaction_type=ttype)
+    if status:
+        txns = txns.filter(status=status)
+    if q:
+        txns = txns.filter(
+            Q(user__username__icontains=q) | Q(user__profile__full_name__icontains=q) | Q(description__icontains=q)
+        )
+    page = Paginator(txns, 30).get_page(request.GET.get("page"))
+    return render(request, "dashboard/manage/transactions.html", {
+        "page_obj": page, "section": "transactions",
+        "type": ttype, "status": status, "q": q,
+        "type_choices": Transaction.TYPE_CHOICES, "status_choices": Transaction.STATUS_CHOICES,
+    })
+
+
+# -------- Community links (singleton) --------
+@staff_member_required
+def manage_community(request):
+    settings_obj = SiteSettings.load()
+    form = SiteSettingsForm(request.POST or None, instance=settings_obj)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Community links updated.")
+        return redirect("dashboard:manage_community")
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "community", "title": "Community & contact links",
+        "back_url": "dashboard:admin_dashboard",
+    })
+
+
+# -------- Announcements --------
+@staff_member_required
+def manage_announcements(request):
+    announcements = Announcement.objects.all()
+    return render(request, "dashboard/manage/announcements.html", {
+        "announcements": announcements, "section": "announcements",
+    })
+
+
+@staff_member_required
+def announcement_create(request):
+    form = AnnouncementForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Announcement published.")
+        return redirect("dashboard:manage_announcements")
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "announcements", "title": "New announcement",
+        "back_url": "dashboard:manage_announcements",
+    })
+
+
+@staff_member_required
+def announcement_edit(request, pk):
+    announcement = get_object_or_404(Announcement, pk=pk)
+    form = AnnouncementForm(request.POST or None, instance=announcement)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Announcement updated.")
+        return redirect("dashboard:manage_announcements")
+    return render(request, "dashboard/manage/form.html", {
+        "form": form, "section": "announcements", "title": f"Edit: {announcement.title}",
+        "back_url": "dashboard:manage_announcements", "delete_url": "dashboard:announcement_delete",
+        "object": announcement,
+    })
+
+
+@staff_member_required
+@require_POST
+def announcement_delete(request, pk):
+    announcement = get_object_or_404(Announcement, pk=pk)
+    announcement.delete()
+    messages.success(request, "Announcement deleted.")
+    return redirect("dashboard:manage_announcements")
+
+
+@staff_member_required
+@require_POST
+def announcement_toggle(request, pk):
+    announcement = get_object_or_404(Announcement, pk=pk)
+    announcement.is_active = not announcement.is_active
+    announcement.save(update_fields=["is_active"])
+    messages.success(request, f"Announcement is now {'active' if announcement.is_active else 'hidden'}.")
+    return redirect("dashboard:manage_announcements")
